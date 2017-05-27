@@ -495,7 +495,7 @@ public final class MqttFactory {
 	 * Sets the MQTT version.
 	 * 
 	 * @see MqttConnectOptions#setMqttVersion(int)
-	 * @param MqttVersion
+	 * @param mqttVersion
 	 *            the version of the MQTT protocol.
 	 * @throws IllegalArgumentException
 	 *             If the MqttVersion supplied is invalid
