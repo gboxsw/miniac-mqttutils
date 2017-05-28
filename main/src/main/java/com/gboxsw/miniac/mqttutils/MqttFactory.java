@@ -4,12 +4,21 @@ import java.io.*;
 import java.util.*;
 
 import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 
 /**
  * Factory generating basic MQTT instances with respect to given configuration.
  * 
  */
 public final class MqttFactory {
+
+	/**
+	 * Persistence modes supported by the factory.
+	 */
+	public static enum Persistence {
+		MEMORY, FILE
+	}
 
 	/**
 	 * The empty payload (byte array).
@@ -21,7 +30,7 @@ public final class MqttFactory {
 	 */
 	private static final String[] propertyNames = { "ServerURI", "ClientId", "ClientIdPrefix", "UserName", "Password",
 			"AutomaticReconnect", "CleanSession", "ConnectionTimeout", "KeepAliveInterval", "MaxInflight", "MessageQoS",
-			"MqttVersion" };
+			"MqttVersion", "Persistence", "PersistenceDir" };
 
 	/**
 	 * The address of the server to connect to, specified as a URI.
@@ -48,6 +57,16 @@ public final class MqttFactory {
 	 * Password.
 	 */
 	private String password = "";
+
+	/**
+	 * Persistence type for generated clients.
+	 */
+	private Persistence persistence = Persistence.MEMORY;
+
+	/**
+	 * Directory for string persistence data.
+	 */
+	private String persistenceDir = "";
 
 	/**
 	 * Basic pre-configured connect options.
@@ -107,6 +126,8 @@ public final class MqttFactory {
 			userName = source.userName;
 			password = source.password;
 			messageQoS = source.messageQoS;
+			persistence = source.persistence;
+			persistenceDir = source.persistenceDir;
 		}
 	}
 
@@ -116,9 +137,25 @@ public final class MqttFactory {
 	 * @return the instance.
 	 */
 	public IMqttClient createClient() {
+		return createClient(null);
+	}
+
+	/**
+	 * Creates a new instance of {@link IMqttClient} with given persistence
+	 * class.
+	 * 
+	 * @param persistence
+	 *            the persistence class to use to store in-flight message.
+	 * @return the instance.
+	 */
+	public IMqttClient createClient(MqttClientPersistence persistence) {
 		synchronized (lock) {
 			try {
-				MqttClient client = new MqttClient(serverUri, generateClientId(), null);
+				if (persistence == null) {
+					persistence = createPersistance();
+				}
+
+				MqttClient client = new MqttClient(serverUri, generateClientId(), persistence);
 				return client;
 			} catch (Exception e) {
 				throw new MqttFactoryException("Construction of MQTT client failed.", e);
@@ -132,9 +169,25 @@ public final class MqttFactory {
 	 * @return the instance.
 	 */
 	public IMqttAsyncClient createAsyncClient() {
+		return createAsyncClient(null);
+	}
+
+	/**
+	 * Creates a new instance of {@link IMqttAsyncClient} with given persistence
+	 * class.
+	 * 
+	 * @param persistence
+	 *            the persistence class to use to store in-flight message.
+	 * @return the instance.
+	 */
+	public IMqttAsyncClient createAsyncClient(MqttClientPersistence persistence) {
 		synchronized (lock) {
 			try {
-				MqttAsyncClient client = new MqttAsyncClient(serverUri, generateClientId(), null);
+				if (persistence == null) {
+					persistence = createPersistance();
+				}
+
+				MqttAsyncClient client = new MqttAsyncClient(serverUri, generateClientId(), persistence);
 				return client;
 			} catch (Exception e) {
 				throw new MqttFactoryException("Construction of async MQTT client failed.", e);
@@ -216,6 +269,22 @@ public final class MqttFactory {
 	private void checkMutability() {
 		if (!mutable) {
 			throw new IllegalStateException("The factory is immutable.");
+		}
+	}
+
+	/**
+	 * Returns new instance of appropriate persistence implementation.
+	 * 
+	 * @return the persistence implementation.
+	 */
+	private MqttClientPersistence createPersistance() {
+		switch (persistence) {
+		case FILE:
+			return new MqttDefaultFilePersistence(getPersistenceDir());
+		case MEMORY:
+			return new MemoryPersistence();
+		default:
+			return null;
 		}
 	}
 
@@ -335,6 +404,56 @@ public final class MqttFactory {
 		synchronized (lock) {
 			checkMutability();
 			this.clientId = clientId.trim();
+		}
+	}
+
+	/**
+	 * Returns persistence type used by generated client.
+	 * 
+	 * @return the persistence type or null, indicating that a default
+	 *         persistence class is used.
+	 */
+	public Persistence getPersistence() {
+		synchronized (lock) {
+			return persistence;
+		}
+	}
+
+	/**
+	 * Sets the persistence type.
+	 * 
+	 * @param persistence
+	 *            the persistence type or null indicating use of default
+	 *            persistence class.
+	 */
+	public void setPersistence(Persistence persistence) {
+		synchronized (lock) {
+			checkMutability();
+			this.persistence = persistence;
+		}
+	}
+
+	/**
+	 * Returns persistence directory for file based persistence implementation.
+	 * 
+	 * @return the directory with persistence data.
+	 */
+	public String getPersistenceDir() {
+		synchronized (lock) {
+			return persistenceDir;
+		}
+	}
+
+	/**
+	 * Sets the persistence directory for file based persistence implementation.
+	 * 
+	 * @param directory
+	 *            the directory with persistence data.
+	 */
+	public void setPersistenceDir(String directory) {
+		synchronized (lock) {
+			checkMutability();
+			this.persistenceDir = directory;
 		}
 	}
 
@@ -566,6 +685,23 @@ public final class MqttFactory {
 			default:
 				setMqttVersion(MqttConnectOptions.MQTT_VERSION_DEFAULT);
 			}
+			break;
+		case "persistence":
+			switch (value.toLowerCase()) {
+			case "memory":
+				setPersistence(Persistence.MEMORY);
+				break;
+			case "file":
+				setPersistence(Persistence.FILE);
+				break;
+			default:
+				setPersistence(null);
+				break;
+			}
+			break;
+		case "persistencedir":
+			setPersistenceDir(value);
+			break;
 		default:
 			break;
 		}
@@ -611,7 +747,15 @@ public final class MqttFactory {
 			default:
 				return "default";
 			}
-
+		case "persistence":
+			Persistence persistence = getPersistence();
+			if (persistence == null) {
+				return "";
+			} else {
+				return persistence.toString();
+			}
+		case "persistencedir":
+			return getPersistenceDir();
 		default:
 			return null;
 		}
@@ -623,11 +767,22 @@ public final class MqttFactory {
 	 * @return the map with property values.
 	 */
 	public Map<String, String> getProperties() {
+		return getProperties(true);
+	}
+
+	/**
+	 * Returns map with current values of all properties.
+	 * 
+	 * @param skipEmpty
+	 *            set true to skip all properties with empty or null value.
+	 * @return the map with property values.
+	 */
+	public Map<String, String> getProperties(boolean skipEmpty) {
 		synchronized (lock) {
-			Map<String, String> result = new HashMap<>();
+			Map<String, String> result = new LinkedHashMap<>();
 			for (String propertyName : propertyNames) {
 				String value = getProperty(propertyName);
-				if ((value != null) && (!value.trim().isEmpty())) {
+				if (!skipEmpty || ((value != null) && (!value.trim().isEmpty()))) {
 					result.put(propertyName, value);
 				}
 			}

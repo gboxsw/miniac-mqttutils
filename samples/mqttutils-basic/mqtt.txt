@@ -1,0 +1,5 @@
+# Server URI
+ServerURI = tcp://iot.eclipse.org:1883
+
+# Persistence
+Persistence = MEMORY

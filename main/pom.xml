@@ -4,12 +4,13 @@
 
 	<groupId>com.gboxsw.miniac</groupId>
 	<artifactId>mqttutils</artifactId>
-	<version>0.0.1</version>
+	<version>0.0.2</version>
 	<packaging>jar</packaging>
 
 	<name>mqttutils</name>
-	<url>http://maven.apache.org</url>
-
+	<url>https://github.com/gboxsw/miniac-mqttutils</url>
+	<description>Factory and helper classes for Eclipse Paho.</description>
+	
 	<issueManagement>
 		<system>github</system>
 		<url>https://github.com/gboxsw/miniac-mqttutils/issues</url>
