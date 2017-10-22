@@ -4,13 +4,13 @@
 
 	<groupId>com.gboxsw.miniac</groupId>
 	<artifactId>mqttutils</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<packaging>jar</packaging>
 
 	<name>mqttutils</name>
 	<url>https://github.com/gboxsw/miniac-mqttutils</url>
 	<description>Factory and helper classes for Eclipse Paho.</description>
-	
+
 	<issueManagement>
 		<system>github</system>
 		<url>https://github.com/gboxsw/miniac-mqttutils/issues</url>
@@ -48,7 +48,7 @@
 		<dependency>
 			<groupId>org.eclipse.paho</groupId>
 			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
-			<version>1.1.1</version>
+			<version>1.2.0</version>
 		</dependency>
 	</dependencies>
 
